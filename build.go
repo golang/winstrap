@@ -38,9 +38,10 @@ func notWindowsMain() {
 		check(err)
 		defer f.Close()
 		date := time.Now().Format("2006-01-02")
-		check(Upload("winstrap-"+date+"-"+digest[:7]+".exe",
-			"winstrap.exe from "+date+": "+digest,
+		fileName := fmt.Sprintf("winstrap-%s-%s.exe", date, digest[:7])
+		check(Upload(fileName, "winstrap.exe from "+date+": "+digest,
 			f))
+		log.Printf("uploaded %s", fileName)
 	}
 }
 

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bufio"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -9,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 )
 
@@ -20,11 +23,23 @@ var files = map[string]string{
 
 var altMain func()
 
+var flagYes = flag.Bool("yes", false, "Run without prompt")
+
 func main() {
 	if runtime.GOOS != "windows" {
 		altMain()
 		return
 	}
+	flag.Parse()
+	if !*flagYes {
+		log.Printf("This program will install Go, Mingw, Mercurial, Chrome, etc. Type 'go<enter>' to proceed.")
+		if !awaitString("go") {
+			log.Printf("Canceled.")
+			awaitEnter()
+			return
+		}
+	}
+
 	log.Printf("Downloading files.")
 	var wg sync.WaitGroup
 	for file, url := range files {
@@ -33,15 +48,62 @@ func main() {
 	}
 	wg.Wait()
 
+	checkMingw()
 	checkoutGo()
 
-	checkMingw()
+	runGoMakeBat("386")
+	runGoMakeBat("amd64")
 
 	// TODO(bradfitz): run make.bat, build the builder, ming64
 	// overlay, etc
 
 	fmt.Println("[ Press enter to exit ]")
 	awaitEnter()
+}
+
+func runGoMakeBat(arch string) {
+	if arch != "386" && arch != "amd64" {
+		panic("invalid arch " + arch)
+	}
+
+	testFile := filepath.Join(goroot(), "pkg", "tool", "windows_"+arch, "api.exe")
+	if fileExists(testFile) {
+		log.Printf("Skipping make.bat for windows_%s; already built.", arch)
+		return
+	}
+
+	log.Printf("Running make.bat for arch %s ...", arch)
+	cmd := exec.Command(filepath.Join(goroot(), "src", "make.bat"))
+	cmd.Dir = filepath.Join(goroot(), "src")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Env = append([]string{
+		"GOARCH=" + arch,
+		`PATH=C:\MingW\bin;` + os.Getenv("PATH"),
+	}, removeEnvs(os.Environ(), "PATH")...)
+
+	err := cmd.Run()
+	if err != nil {
+		log.Fatalf("make.bat for arch %s: %v", arch, err)
+	}
+	log.Printf("ran make.bat for arch %s", arch)
+}
+
+func removeEnvs(envs []string, removeKeys ...string) []string {
+	var ret []string
+	for _, env := range envs {
+		include := true
+		for _, remove := range removeKeys {
+			if strings.HasPrefix(env, remove+"=") {
+				include = false
+				break
+			}
+		}
+		if include {
+			ret = append(ret, env)
+		}
+	}
+	return ret
 }
 
 func checkMingw() {
@@ -53,9 +115,8 @@ func checkMingw() {
 }
 
 func checkoutGo() {
-	goroot := filepath.Join(home(), "goroot")
-	if fileExists(goroot) {
-		log.Printf("GOROOT %s already exists; skipping hg checkout", goroot)
+	if fileExists(goroot()) {
+		log.Printf("GOROOT %s already exists; skipping hg checkout", goroot())
 		return
 	}
 	log.Printf("Checking out Go source using Mercurial (hg)")
@@ -75,6 +136,12 @@ func awaitEnter() {
 	os.Stdin.Read(buf[:])
 }
 
+func awaitString(want string) bool {
+	br := bufio.NewReader(os.Stdin)
+	ln, _, _ := br.ReadLine()
+	return strings.TrimSpace(string(ln)) == want
+}
+
 func fileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
@@ -87,6 +154,8 @@ func check(err error) {
 }
 
 func home() string { return os.Getenv("HOMEPATH") }
+
+func goroot() string { return filepath.Join(home(), "goroot") }
 
 func download(file, url string, wg *sync.WaitGroup) {
 	defer wg.Done()
