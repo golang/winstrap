@@ -61,6 +61,11 @@ func main() {
 	awaitEnter()
 }
 
+const (
+	mingwBin   = `C:\MingW\bin`
+	mingw64Bin = `C:\MingW64\bin`
+)
+
 func runGoMakeBat(arch string) {
 	if arch != "386" && arch != "amd64" {
 		panic("invalid arch " + arch)
@@ -77,9 +82,18 @@ func runGoMakeBat(arch string) {
 	cmd.Dir = filepath.Join(goroot(), "src")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+
+	gccPath := mingwBin
+	if arch == "amd64" {
+		gccPath = mingw64Bin
+		if err := initMingw64Bin(); err != nil {
+			log.Fatalf("failed to init C:\\mingw64\\bin directory: %v", err)
+		}
+	}
+
 	cmd.Env = append([]string{
 		"GOARCH=" + arch,
-		`PATH=C:\MingW\bin;` + os.Getenv("PATH"),
+		"PATH=" + gccPath + ";" + os.Getenv("PATH"),
 	}, removeEnvs(os.Environ(), "PATH")...)
 
 	err := cmd.Run()
@@ -87,6 +101,54 @@ func runGoMakeBat(arch string) {
 		log.Fatalf("make.bat for arch %s: %v", arch, err)
 	}
 	log.Printf("ran make.bat for arch %s", arch)
+}
+
+func initMingw64Bin() error {
+	dstGcc := filepath.Join(mingw64Bin, "gcc.exe")
+	dstAr := filepath.Join(mingw64Bin, "ar.exe")
+	srcGcc := filepath.Join(mingwBin, "x86_64-w64-mingw32-gcc.exe")
+	srcAr := filepath.Join(mingwBin, "x86_64-w64-mingw32-ar.exe")
+	if fileExists(dstGcc) && fileExists(dstAr) {
+		return nil
+	}
+	if err := os.MkdirAll(mingw64Bin, 0755); err != nil {
+		return err
+	}
+	if !fileExists(dstGcc) {
+		if err := cp(srcGcc, dstGcc); err != nil {
+			return err
+		}
+	}
+	if !fileExists(dstAr) {
+		if err := cp(srcAr, dstAr); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func cp(src, dst string) (err error) {
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("copying from %s to %s: %v", src, dst, err)
+		}
+	}()
+	f, err := os.Open(src)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	os.Remove(dst)
+	f2, err := os.Create(dst)
+	if err != nil {
+		return
+	}
+	_, err = io.Copy(f2, f)
+	if err != nil {
+		return
+	}
+	err = f2.Close()
+	return
 }
 
 func removeEnvs(envs []string, removeKeys ...string) []string {
@@ -107,8 +169,7 @@ func removeEnvs(envs []string, removeKeys ...string) []string {
 }
 
 func checkMingw() {
-	const mingDir = `c:\Mingw\bin`
-	for !fileExists(mingDir) {
+	for !fileExists(mingwBin) {
 		log.Printf("%s doesn't exist. Install mingw and then press enter...")
 		awaitEnter()
 	}
