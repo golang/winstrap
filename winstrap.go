@@ -48,7 +48,9 @@ func main() {
 	}
 	wg.Wait()
 
+	checkHg()
 	checkGcc()
+
 	checkoutGo()
 
 	runGoMakeBat("386")
@@ -108,14 +110,32 @@ func removeEnvs(envs []string, removeKeys ...string) []string {
 	return ret
 }
 
+func checkHg() {
+	for {
+		if _, ok := hgBin(); ok {
+			break
+		}
+		log.Print("Can't find hg binary. Install Mercurial and then press enter...")
+		awaitEnter()
+	}
+}
+
+const hgDefaultPath = `C:\Program Files\Mercurial\hg.exe`
+
+func hgBin() (string, bool) {
+	b, err := exec.LookPath("hg")
+	if err != nil {
+		b = hgDefaultPath
+	}
+	return b, fileExists(b)
+}
+
 func checkGcc() {
 	for !fileExists(gccPath) {
 		log.Printf("%s doesn't exist. Install gcc and then press enter...", gccPath)
 		awaitEnter()
 	}
 }
-
-const hgDefaultPath = `C:\Program Files\Mercurial\hg.exe`
 
 func checkoutGo() {
 	if fileExists(goroot()) {
@@ -124,12 +144,8 @@ func checkoutGo() {
 	}
 	log.Printf("Checking out Go source using Mercurial (hg)")
 
-	hgBin, err := exec.LookPath("hg")
-	if err != nil {
-		hgBin = hgDefaultPath
-		log.Printf("Couldn't find hg binary in PATH, trying %v", hgBin)
-	}
-	cmd := exec.Command(hgBin, "clone", "https://code.google.com/p/go", "goroot")
+	hg, _ := hgBin()
+	cmd := exec.Command(hg, "clone", "https://code.google.com/p/go", "goroot")
 	cmd.Dir = home()
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
