@@ -16,9 +16,9 @@ import (
 )
 
 var files = map[string]string{
-	"ChromeStandaloneSetup.exe": "https://dl.google.com/tag/s/appguid%3D%7B8A69D345-D564-463C-AFF1-A69D9E530F96%7D%26iid%3D%7BAF3A54A1-01DD-6358-922D-9F48BABA316B%7D%26lang%3Den%26browser%3D2%26usagestats%3D0%26appname%3DGoogle%2520Chrome%26needsadmin%3Dfalse%26installdataindex%3Ddefaultbrowser/update2/installers/ChromeStandaloneSetup.exe",
-	"Mercurial.exe":             "http://mercurial.selenic.com/release/windows/Mercurial-2.3.1.exe",
-	"mingw-inst.exe":            "http://superb-dca3.dl.sourceforge.net/project/mingw/Installer/mingw-get-inst/mingw-get-inst-20120426/mingw-get-inst-20120426.exe",
+	"ChromeStandaloneSetup.exe": "https://dl.google.com/tag/s/appguid%3D%7B8A69D345-D564-463C-AFF1-A69D9E530F96%7D%26iid%3D%7BC159FD9F-6827-8E7E-0CC8-7783A1335AA5%7D%26lang%3Den%26browser%3D4%26usagestats%3D0%26appname%3DGoogle%2520Chrome%26needsadmin%3Dprefers%26installdataindex%3Ddefaultbrowser/update2/installers/ChromeStandaloneSetup.exe",
+	"Mercurial.exe":             "http://mercurial.selenic.com/release/windows/Mercurial-3.1-x64.exe",
+	"tdm64-gcc-4.8.1-3.exe":     "http://downloads.sourceforge.net/project/tdm-gcc/TDM-GCC%20Installer/tdm64-gcc-4.8.1-3.exe?r=http%3A%2F%2Ftdm-gcc.tdragon.net%2Fdownload&ts=1407729829&use_mirror=ufpr",
 }
 
 var altMain func()
@@ -48,23 +48,19 @@ func main() {
 	}
 	wg.Wait()
 
-	checkMingw()
+	checkGcc()
 	checkoutGo()
 
 	runGoMakeBat("386")
 	runGoMakeBat("amd64")
 
-	// TODO(bradfitz): run make.bat, build the builder, ming64
-	// overlay, etc
+	log.Printf(`Installed go to %v, please add %v\bin to your PATH`, goroot(), goroot())
 
 	fmt.Println("[ Press enter to exit ]")
 	awaitEnter()
 }
 
-const (
-	mingwBin   = `C:\MingW\bin`
-	mingw64Bin = `C:\MingW64\bin`
-)
+const gccPath = `C:\TDM-GCC-64\bin`
 
 func runGoMakeBat(arch string) {
 	if arch != "386" && arch != "amd64" {
@@ -83,14 +79,6 @@ func runGoMakeBat(arch string) {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	gccPath := mingwBin
-	if arch == "amd64" {
-		gccPath = mingw64Bin
-		if err := initMingw64Bin(); err != nil {
-			log.Fatalf("failed to init C:\\mingw64\\bin directory: %v", err)
-		}
-	}
-
 	cmd.Env = append([]string{
 		"GOARCH=" + arch,
 		"PATH=" + gccPath + ";" + os.Getenv("PATH"),
@@ -101,54 +89,6 @@ func runGoMakeBat(arch string) {
 		log.Fatalf("make.bat for arch %s: %v", arch, err)
 	}
 	log.Printf("ran make.bat for arch %s", arch)
-}
-
-func initMingw64Bin() error {
-	dstGcc := filepath.Join(mingw64Bin, "gcc.exe")
-	dstAr := filepath.Join(mingw64Bin, "ar.exe")
-	srcGcc := filepath.Join(mingwBin, "x86_64-w64-mingw32-gcc.exe")
-	srcAr := filepath.Join(mingwBin, "x86_64-w64-mingw32-ar.exe")
-	if fileExists(dstGcc) && fileExists(dstAr) {
-		return nil
-	}
-	if err := os.MkdirAll(mingw64Bin, 0755); err != nil {
-		return err
-	}
-	if !fileExists(dstGcc) {
-		if err := cp(srcGcc, dstGcc); err != nil {
-			return err
-		}
-	}
-	if !fileExists(dstAr) {
-		if err := cp(srcAr, dstAr); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func cp(src, dst string) (err error) {
-	defer func() {
-		if err != nil {
-			err = fmt.Errorf("copying from %s to %s: %v", src, dst, err)
-		}
-	}()
-	f, err := os.Open(src)
-	if err != nil {
-		return
-	}
-	defer f.Close()
-	os.Remove(dst)
-	f2, err := os.Create(dst)
-	if err != nil {
-		return
-	}
-	_, err = io.Copy(f2, f)
-	if err != nil {
-		return
-	}
-	err = f2.Close()
-	return
 }
 
 func removeEnvs(envs []string, removeKeys ...string) []string {
@@ -168,12 +108,14 @@ func removeEnvs(envs []string, removeKeys ...string) []string {
 	return ret
 }
 
-func checkMingw() {
-	for !fileExists(mingwBin) {
-		log.Printf("%s doesn't exist. Install mingw and then press enter...")
+func checkGcc() {
+	for !fileExists(gccPath) {
+		log.Printf("%s doesn't exist. Install gcc and then press enter...", gccPath)
 		awaitEnter()
 	}
 }
+
+const hgDefaultPath = `C:\Program Files\Mercurial\hg.exe`
 
 func checkoutGo() {
 	if fileExists(goroot()) {
@@ -181,12 +123,17 @@ func checkoutGo() {
 		return
 	}
 	log.Printf("Checking out Go source using Mercurial (hg)")
-	cmd := exec.Command("hg", "clone", "https://code.google.com/p/go", "goroot")
+
+	hgBin, err := exec.LookPath("hg")
+	if err != nil {
+		hgBin = hgDefaultPath
+		log.Printf("Couldn't find hg binary in PATH, trying %v", hgBin)
+	}
+	cmd := exec.Command(hgBin, "clone", "https://code.google.com/p/go", "goroot")
 	cmd.Dir = home()
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	err := cmd.Run()
-	if err != nil {
+	if err := cmd.Run(); err != nil {
 		log.Fatalf("hg clone failed. Is Mercurial installed? Re-run later. Error: %v", err)
 	}
 	log.Printf("Checked out Go.")
