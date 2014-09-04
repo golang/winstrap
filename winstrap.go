@@ -16,10 +16,9 @@ import (
 )
 
 var files = map[string]string{
-	"ChromeStandaloneSetup.exe": "https://dl.google.com/tag/s/appguid%3D%7B8A69D345-D564-463C-AFF1-A69D9E530F96%7D%26iid%3D%7BC159FD9F-6827-8E7E-0CC8-7783A1335AA5%7D%26lang%3Den%26browser%3D4%26usagestats%3D0%26appname%3DGoogle%2520Chrome%26needsadmin%3Dprefers%26installdataindex%3Ddefaultbrowser/update2/installers/ChromeStandaloneSetup.exe",
-	"Mercurial.exe":             "http://mercurial.selenic.com/release/windows/Mercurial-3.1-x64.exe",
-	"tdm64-gcc-4.8.1-3.exe":     "http://downloads.sourceforge.net/project/tdm-gcc/TDM-GCC%20Installer/tdm64-gcc-4.8.1-3.exe?r=http%3A%2F%2Ftdm-gcc.tdragon.net%2Fdownload&ts=1407729829&use_mirror=ufpr",
-	wixFilename:                 "http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=wix&DownloadId=204417&FileTime=129409234222130000&Build=20919",
+	"Mercurial.exe":         "http://mercurial.selenic.com/release/windows/Mercurial-3.1-x64.exe",
+	"tdm64-gcc-4.8.1-3.exe": "http://downloads.sourceforge.net/project/tdm-gcc/TDM-GCC%20Installer/tdm64-gcc-4.8.1-3.exe?r=http%3A%2F%2Ftdm-gcc.tdragon.net%2Fdownload&ts=1407729829&use_mirror=ufpr",
+	wixFilename:             "http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=wix&DownloadId=204417&FileTime=129409234222130000&Build=20919",
 }
 
 const wixFilename = "Wix35.msi"
@@ -38,7 +37,7 @@ func main() {
 	}
 	flag.Parse()
 	if !*flagYes {
-		log.Printf("This program will install Go, Mingw, Mercurial, Chrome, etc. Type 'go<enter>' to proceed.")
+		log.Printf("This program will install Go, Mingw, Mercurial, etc. Type 'go<enter>' to proceed.")
 		if !awaitString("go") {
 			log.Printf("Canceled.")
 			awaitEnter()
