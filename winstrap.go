@@ -214,7 +214,7 @@ func check(err error) {
 	}
 }
 
-func home() string { return os.Getenv("HOMEPATH") }
+func home() string { return os.Getenv("HOMEDRIVE") + os.Getenv("HOMEPATH") }
 
 func goroot() string { return filepath.Join(home(), "goroot") }
 
