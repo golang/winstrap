@@ -28,6 +28,7 @@ var altMain func()
 var (
 	flagYes = flag.Bool("yes", false, "Run without prompt")
 	release = flag.Bool("release", false, "Set up a release builder")
+	homeDir = flag.String("home", defaultHome(), "custom home directory")
 )
 
 func main() {
@@ -214,7 +215,14 @@ func check(err error) {
 	}
 }
 
-func home() string { return os.Getenv("HOMEPATH") }
+func defaultHome() string { return os.Getenv("HOMEDRIVE") + os.Getenv("HOMEPATH") }
+
+func home() string {
+	if *homeDir != "" {
+		return *homeDir
+	}
+	return defaultHome()
+}
 
 func goroot() string { return filepath.Join(home(), "goroot") }
 
