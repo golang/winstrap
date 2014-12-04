@@ -16,9 +16,12 @@ import (
 )
 
 var files = map[string]string{
-	"Mercurial.exe":         "http://mercurial.selenic.com/release/windows/Mercurial-3.1-x64.exe",
 	"tdm64-gcc-4.8.1-3.exe": "http://downloads.sourceforge.net/project/tdm-gcc/TDM-GCC%20Installer/tdm64-gcc-4.8.1-3.exe?r=http%3A%2F%2Ftdm-gcc.tdragon.net%2Fdownload&ts=1407729829&use_mirror=ufpr",
 	wixFilename:             "http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=wix&DownloadId=204417&FileTime=129409234222130000&Build=20919",
+	"Git.exe":               "https://github.com/msysgit/msysgit/releases/download/Git-1.9.4-preview20140929/Git-1.9.4-preview20140929.exe",
+
+	// Previously:
+	// "Mercurial.exe": "http://mercurial.selenic.com/release/windows/Mercurial-3.1-x64.exe",
 }
 
 const wixFilename = "Wix35.msi"
@@ -38,7 +41,7 @@ func main() {
 	}
 	flag.Parse()
 	if !*flagYes {
-		log.Printf("This program will install Go, Mingw, Mercurial, etc. Type 'go<enter>' to proceed.")
+		log.Printf("This program will install Go, Mingw, Git, etc. Type 'go<enter>' to proceed.")
 		if !awaitString("go") {
 			log.Printf("Canceled.")
 			awaitEnter()
@@ -57,7 +60,7 @@ func main() {
 	}
 	wg.Wait()
 
-	checkHg()
+	checkGit()
 	checkGcc()
 
 	checkoutGo()
@@ -148,22 +151,22 @@ func removeEnvs(envs []string, removeKeys ...string) []string {
 	return ret
 }
 
-func checkHg() {
+func checkGit() {
 	for {
-		if _, ok := hgBin(); ok {
+		if _, ok := gitBin(); ok {
 			break
 		}
-		log.Print("Can't find hg binary. Install Mercurial and then press enter...")
+		log.Print("Can't find git binary. Install Git and then press enter... (use middle option: make git available to cmd.exe)")
 		awaitEnter()
 	}
 }
 
-const hgDefaultPath = `C:\Program Files\Mercurial\hg.exe`
+const gitDefaultPath = `C:\Program Files (x86)\Git\cmd\git.exe`
 
-func hgBin() (string, bool) {
-	b, err := exec.LookPath("hg")
+func gitBin() (string, bool) {
+	b, err := exec.LookPath("git")
 	if err != nil {
-		b = hgDefaultPath
+		b = gitDefaultPath
 	}
 	return b, fileExists(b)
 }
@@ -182,13 +185,13 @@ func checkoutGo() {
 	}
 	log.Printf("Checking out Go source using Mercurial (hg)")
 
-	hg, _ := hgBin()
-	cmd := exec.Command(hg, "clone", "https://code.google.com/p/go", "goroot")
+	git, _ := gitBin()
+	cmd := exec.Command(git, "clone", "https://go.googlesource.com/go", "goroot")
 	cmd.Dir = home()
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
-		log.Fatalf("hg clone failed. Is Mercurial installed? Re-run later. Error: %v", err)
+		log.Fatalf("git clone failed. Is Git installed? Re-run later. Error: %v", err)
 	}
 	log.Printf("Checked out Go.")
 }
