@@ -16,16 +16,12 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"sync"
 )
 
 var files = map[string]string{
 	"tdm64-gcc-4.8.1-3.exe": "http://downloads.sourceforge.net/project/tdm-gcc/TDM-GCC%20Installer/tdm64-gcc-4.8.1-3.exe?r=http%3A%2F%2Ftdm-gcc.tdragon.net%2Fdownload&ts=1407729829&use_mirror=ufpr",
 	wixFilename:             "http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=wix&DownloadId=204417&FileTime=129409234222130000&Build=20919",
-	"Git.exe":               "https://github.com/msysgit/msysgit/releases/download/Git-1.9.4-preview20140929/Git-1.9.4-preview20140929.exe",
-
-	// Previously:
-	// "Mercurial.exe": "http://mercurial.selenic.com/release/windows/Mercurial-3.1-x64.exe",
+	"Git.exe":               "https://github.com/msysgit/msysgit/releases/download/Git-1.9.5-preview20141217/Git-1.9.5-preview20141217.exe",
 }
 
 const wixFilename = "Wix35.msi"
@@ -38,6 +34,14 @@ var (
 	homeDir = flag.String("home", defaultHome(), "custom home directory")
 )
 
+func waitForGo() {
+	if !awaitString("go") {
+		log.Printf("Canceled.")
+		awaitEnter()
+		os.Exit(0)
+	}
+}
+
 func main() {
 	if runtime.GOOS != "windows" {
 		altMain()
@@ -45,30 +49,44 @@ func main() {
 	}
 	flag.Parse()
 	if !*flagYes {
-		log.Printf("This program will install Go, Mingw, Git, etc. Type 'go<enter>' to proceed.")
-		if !awaitString("go") {
-			log.Printf("Canceled.")
-			awaitEnter()
-			return
-		}
+		log.Printf("This program will first download TDM-GCC, Wix, and Git, then let you optinally install Go and do a release.\nType 'go<enter>' to proceed.")
+		waitForGo()
 	}
 
 	log.Printf("Downloading files.")
-	var wg sync.WaitGroup
+	var errs []chan error
 	for file, url := range files {
 		if !*release && file == wixFilename {
 			continue
 		}
-		wg.Add(1)
-		go download(file, url, &wg)
+		errc := make(chan error)
+		errs = append(errs, errc)
+		go func(file, url string) {
+			errc <- download(file, url)
+		}(file, url)
 	}
-	wg.Wait()
+	var anyErr bool
+	for _, errc := range errs {
+		if err := <-errc; err != nil {
+			log.Printf("Download error: %v", err)
+			anyErr = true
+		}
+	}
+	if anyErr {
+		log.Printf("Download errors. Proceed? Type 'go'")
+		waitForGo()
+	}
 
 	checkGit()
 	checkGcc()
 
+	log.Printf("This program will now check out go. Type 'go' to proceed.")
+	waitForGo()
+
 	checkoutGo()
 
+	log.Printf("This program will now compile Go for 386 and amd64. Type 'go' to proceed.")
+	waitForGo()
 	runGoMakeBat("386")
 	runGoMakeBat("amd64")
 
@@ -184,10 +202,10 @@ func checkGcc() {
 
 func checkoutGo() {
 	if fileExists(goroot()) {
-		log.Printf("GOROOT %s already exists; skipping hg checkout", goroot())
+		log.Printf("GOROOT %s already exists; skipping git checkout", goroot())
 		return
 	}
-	log.Printf("Checking out Go source using Mercurial (hg)")
+	log.Printf("Checking out Go source using git")
 
 	git, _ := gitBin()
 	cmd := exec.Command(git, "clone", "https://go.googlesource.com/go", "goroot")
@@ -235,35 +253,34 @@ func goroot() string { return filepath.Join(home(), "goroot") }
 
 func gopath() string { return filepath.Join(home(), "gopath") }
 
-func download(file, url string, wg *sync.WaitGroup) {
-	defer wg.Done()
-
+func download(file, url string) error {
 	dst := filepath.Join(home(), "Desktop", file)
 	if _, err := os.Stat(dst); err == nil {
 		log.Printf("%s already on desktop; skipping", file)
-		return
+		return nil
 	}
 
 	res, err := http.Get(url)
 	if err != nil {
-		log.Fatalf("Error fetching %v: %v", url, err)
+		return fmt.Errorf("Error fetching %v: %v", url, err)
 	}
 	tmp := dst + ".tmp"
 	os.Remove(tmp)
 	os.Remove(dst)
 	f, err := os.Create(tmp)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	n, err := io.Copy(f, res.Body)
 	res.Body.Close()
 	if err != nil {
-		log.Fatalf("Error reading %v: %v", url, err)
+		return fmt.Errorf("Error reading %v: %v", url, err)
 	}
 	f.Close()
 	err = os.Rename(tmp, dst)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	log.Printf("Downladed %s (%d bytes) to desktop", file, n)
+	return nil
 }

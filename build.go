@@ -53,6 +53,7 @@ func notWindowsMain() {
 		fileName := fmt.Sprintf("winstrap-%s-%s.exe", date, digest[:7])
 		check(Upload(fileName, f))
 		log.Printf("uploaded %s", fileName)
+		log.Printf("Paste this into Windows:\n   bitsadmin /transfer mydownloadjob  /download /priority normal https://storage.googleapis.com/winstrap/%s c:\\users\\wingopher\\Desktop\\winstrap.exe\n", fileName)
 	}
 }
 
