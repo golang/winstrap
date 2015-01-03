@@ -22,11 +22,19 @@ func init() {
 	altMain = notWindowsMain
 }
 
-var buildWindows = flag.Bool("newwin", false, "force a make.bash of windows_386")
+var (
+	buildWindows = flag.Bool("newwin", false, "force a make.bash of windows_386")
+
+	// Linux/OS X specific (use of HOME) because that's all that
+	// Brad and Andrew use (and other gophers), and we're the only
+	// ones who will be uploading this
+	serviceAcctJSON = flag.String("service_account_json", filepath.Join(os.Getenv("HOME"), "keys/golang-org.service.json"),
+		"Path to a Service Account JSON file from the golang-org project's Credentials screen")
+)
 
 func notWindowsMain() {
 	build := flag.Bool("build", false, "build winstrap.exe")
-	upload := flag.Bool("upload", false, "upload winstrap.exe to code.google.com (implies -build)")
+	upload := flag.Bool("upload", false, "upload winstrap.exe to Google Cloud Storage (implies -build)")
 	flag.Parse()
 	if *upload {
 		*build = true
@@ -43,8 +51,7 @@ func notWindowsMain() {
 		defer f.Close()
 		date := time.Now().Format("2006-01-02")
 		fileName := fmt.Sprintf("winstrap-%s-%s.exe", date, digest[:7])
-		check(Upload(fileName, "winstrap.exe from "+date+": "+digest,
-			f))
+		check(Upload(fileName, f))
 		log.Printf("uploaded %s", fileName)
 	}
 }
