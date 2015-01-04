@@ -19,9 +19,15 @@ import (
 )
 
 var files = map[string]string{
-	"tdm64-gcc-4.8.1-3.exe": "http://downloads.sourceforge.net/project/tdm-gcc/TDM-GCC%20Installer/tdm64-gcc-4.8.1-3.exe?r=http%3A%2F%2Ftdm-gcc.tdragon.net%2Fdownload&ts=1407729829&use_mirror=ufpr",
-	wixFilename:             "http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=wix&DownloadId=204417&FileTime=129409234222130000&Build=20919",
-	"Git.exe":               "https://github.com/msysgit/msysgit/releases/download/Git-1.9.5-preview20141217/Git-1.9.5-preview20141217.exe",
+	// The "tdm64" one (despite the name) doesn't run on 64-bit Windows.
+	// But the tdm-gcc one does, and installs both 32- and 64-bit versions.
+	// No clue what tdm64 means.
+	// "tdm64-gcc-4.8.1-3.exe": "http://downloads.sourceforge.net/project/tdm-gcc/TDM-GCC%20Installer/tdm64-gcc-4.8.1-3.exe?r=http%3A%2F%2Ftdm-gcc.tdragon.net%2Fdownload&ts=1407729829&use_mirror=ufpr",
+	"tdm-gcc-4.9.2.exe": "http://downloads.sourceforge.net/project/tdm-gcc/TDM-GCC%20Installer/tdm-gcc-4.9.2.exe?r=http%3A%2F%2Ftdm-gcc.tdragon.net%2Fdownload&ts=1420336642&use_mirror=hivelocity",
+
+	wixFilename:          "http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=wix&DownloadId=204417&FileTime=129409234222130000&Build=20919",
+	"Git.exe":            "https://github.com/msysgit/msysgit/releases/download/Git-1.9.5-preview20141217/Git-1.9.5-preview20141217.exe",
+	"Start Buildlet.exe": "https://storage.googleapis.com/go-builder-data/buildlet-stage0.windows-amd64",
 }
 
 const wixFilename = "Wix35.msi"
