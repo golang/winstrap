@@ -23,7 +23,9 @@ func init() {
 }
 
 var (
-	buildWindows = flag.Bool("newwin", false, "force a make.bash of windows_386")
+	buildWindows = flag.Bool("newwin", false, "force a make.bash of windows")
+
+	buildArch = flag.String("arch", "amd64", "architecture to build")
 
 	// Linux/OS X specific (use of HOME) because that's all that
 	// Brad and Andrew use (and other gophers), and we're the only
@@ -65,7 +67,7 @@ func buildWinstrap() string {
 	if goRoot == "" {
 		log.Fatal("no GOROOT set")
 	}
-	pkgWin := filepath.Join(goRoot, "pkg", "windows_386")
+	pkgWin := filepath.Join(goRoot, "pkg", "windows_"+*buildArch)
 	if _, err := os.Stat(pkgWin); err != nil {
 		if os.IsNotExist(err) {
 			log.Printf("no %s directory, need to build windows cross-compiler", pkgWin)
@@ -74,7 +76,7 @@ func buildWinstrap() string {
 			log.Fatal(err)
 		}
 	}
-	winEnv := append([]string{"CGO_ENABLED=0", "GOOS=windows", "GOARCH=386"}, os.Environ()...)
+	winEnv := append([]string{"CGO_ENABLED=0", "GOOS=windows", "GOARCH=" + *buildArch}, os.Environ()...)
 	if *buildWindows {
 		cmd := exec.Command(filepath.Join(goRoot, "src", "make.bash"))
 		cmd.Stdout = os.Stdout
