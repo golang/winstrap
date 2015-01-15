@@ -9,6 +9,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -26,7 +27,7 @@ var files = map[string]string{
 	"tdm-gcc-4.9.2.exe": "http://downloads.sourceforge.net/project/tdm-gcc/TDM-GCC%20Installer/tdm-gcc-4.9.2.exe?r=http%3A%2F%2Ftdm-gcc.tdragon.net%2Fdownload&ts=1420336642&use_mirror=hivelocity",
 
 	wixFilename:          "http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=wix&DownloadId=204417&FileTime=129409234222130000&Build=20919",
-	"Git.exe":            "https://github.com/msysgit/msysgit/releases/download/Git-1.9.5-preview20141217/Git-1.9.5-preview20141217.exe",
+	"Install Git.exe":    "https://github.com/msysgit/msysgit/releases/download/Git-1.9.5-preview20141217/Git-1.9.5-preview20141217.exe",
 	"Start Buildlet.exe": "https://storage.googleapis.com/go-builder-data/buildlet-stage0.windows-amd64",
 }
 
@@ -57,6 +58,12 @@ func main() {
 	if !*flagYes {
 		log.Printf("This program will first download TDM-GCC, Wix, and Git, then let you optinally install Go and do a release.\nType 'go<enter>' to proceed.")
 		waitForGo()
+	}
+
+	// TODO(bradfitz): also download Go 1.4 into place at C:\Go1.4
+	runBatFile := filepath.Join(home(), "Desktop", "run-builder.bat")
+	if _, err := os.Stat(runBatFile); os.IsNotExist(err) {
+		ioutil.WriteFile(runBatFile, []byte(strings.Replace(runBuilderBatContents, "\n", "\r\n", -1)), 0755)
 	}
 
 	log.Printf("Downloading files.")
@@ -290,3 +297,14 @@ func download(file, url string) error {
 	log.Printf("Downladed %s (%d bytes) to desktop", file, n)
 	return nil
 }
+
+const runBuilderBatContents = `echo Running the Go builder:
+mkdir \Users\wingopher\gopath
+
+RMDIR /S /Q c:\gobuilder
+SET GOROOT_BOOTSTRAP=c:\Go1.4
+SET GOPATH=\Users\wingopher\gopath
+SET PATH=\Users\wingopher\goroot\bin;%PATH%
+go get -u -v golang.org/x/tools/dashboard/builder
+%GOPATH%\bin\builder -v -parallel windows-amd64 windows-386
+`

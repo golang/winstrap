@@ -28,8 +28,9 @@ func Upload(filename string, content io.Reader) error {
 	if err != nil {
 		return err
 	}
-	conf, err := google.JWTConfigFromJSON(oauth2.NoContext, jsonKey, storage.ScopeReadWrite)
+	conf, err := google.JWTConfigFromJSON(jsonKey, storage.ScopeReadWrite)
 	if err != nil {
+		log.Printf("Failed to get JWT config. Get a Service Account JSON token from https://console.developers.google.com/project/999119582588/apiui/credential")
 		return err
 	}
 	httpClient := conf.Client(oauth2.NoContext)
