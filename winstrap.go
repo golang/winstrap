@@ -26,18 +26,15 @@ var files = map[string]string{
 	// "tdm64-gcc-4.8.1-3.exe": "http://downloads.sourceforge.net/project/tdm-gcc/TDM-GCC%20Installer/tdm64-gcc-4.8.1-3.exe?r=http%3A%2F%2Ftdm-gcc.tdragon.net%2Fdownload&ts=1407729829&use_mirror=ufpr",
 	"tdm-gcc-4.9.2.exe": "http://downloads.sourceforge.net/project/tdm-gcc/TDM-GCC%20Installer/tdm-gcc-4.9.2.exe?r=http%3A%2F%2Ftdm-gcc.tdragon.net%2Fdownload&ts=1420336642&use_mirror=hivelocity",
 
-	wixFilename:          "http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=wix&DownloadId=204417&FileTime=129409234222130000&Build=20919",
+	"Wix35.msi":          "http://storage.googleapis.com/winstrap/Wix35.msi",
 	"Install Git.exe":    "https://github.com/msysgit/msysgit/releases/download/Git-1.9.5-preview20141217/Git-1.9.5-preview20141217.exe",
 	"Start Buildlet.exe": "https://storage.googleapis.com/go-builder-data/buildlet-stage0.windows-amd64",
 }
-
-const wixFilename = "Wix35.msi"
 
 var altMain func()
 
 var (
 	flagYes = flag.Bool("yes", false, "Run without prompt")
-	release = flag.Bool("release", false, "Set up a release builder")
 	homeDir = flag.String("home", defaultHome(), "custom home directory")
 )
 
@@ -56,7 +53,7 @@ func main() {
 	}
 	flag.Parse()
 	if !*flagYes {
-		log.Printf("This program will first download TDM-GCC, Wix, and Git, then let you optinally install Go and do a release.\nType 'go<enter>' to proceed.")
+		log.Printf("This program will first download TDM-GCC, Wix, and Git, then let you optinally install Go.\nType 'go<enter>' to proceed.")
 		waitForGo()
 	}
 
@@ -69,9 +66,6 @@ func main() {
 	log.Printf("Downloading files.")
 	var errs []chan error
 	for file, url := range files {
-		if !*release && file == wixFilename {
-			continue
-		}
 		errc := make(chan error)
 		errs = append(errs, errc)
 		go func(file, url string) {
@@ -102,10 +96,6 @@ func main() {
 	waitForGo()
 	runGoMakeBat("386")
 	runGoMakeBat("amd64")
-
-	if *release {
-		buildMakerelease()
-	}
 
 	log.Printf(`Installed go to %v, please add %v\bin to your PATH`, goroot(), goroot())
 
@@ -142,31 +132,6 @@ func runGoMakeBat(arch string) {
 		log.Fatalf("make.bat for arch %s: %v", arch, err)
 	}
 	log.Printf("ran make.bat for arch %s", arch)
-}
-
-func buildMakerelease() {
-	goCmd := filepath.Join(goroot(), "bin", "go.exe")
-	mrDir := filepath.Join(goroot(), "misc", "makerelease")
-	env := append(
-		[]string{"GOPATH=" + gopath()},
-		removeEnvs(os.Environ(), "GOPATH")...)
-	bin := filepath.Join(home(), "makerelease.exe")
-
-	goDo := func(args ...string) {
-		cmd := exec.Command(goCmd, args...)
-		cmd.Dir = mrDir
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		cmd.Env = env
-		if err := cmd.Run(); err != nil {
-			log.Fatal(err)
-		}
-	}
-
-	log.Print("Fetching dependencies for makerelease...")
-	goDo("get", "-d")
-	log.Println("Building and installing makerelease to", bin)
-	goDo("build", "-o", bin)
 }
 
 func removeEnvs(envs []string, removeKeys ...string) []string {
