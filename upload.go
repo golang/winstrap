@@ -14,9 +14,9 @@ import (
 	"log"
 	"net/http"
 
+	"cloud.google.com/go/storage"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
-	"google.golang.org/cloud/storage"
 )
 
 const (
