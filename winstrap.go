@@ -24,7 +24,7 @@ var files = map[string]string{
 	// But the tdm-gcc one does, and installs both 32- and 64-bit versions.
 	// No clue what tdm64 means.
 	// "tdm64-gcc-4.8.1-3.exe": "http://downloads.sourceforge.net/project/tdm-gcc/TDM-GCC%20Installer/tdm64-gcc-4.8.1-3.exe?r=http%3A%2F%2Ftdm-gcc.tdragon.net%2Fdownload&ts=1407729829&use_mirror=ufpr",
-	"tdm-gcc-4.9.2.exe": "http://downloads.sourceforge.net/project/tdm-gcc/TDM-GCC%20Installer/tdm-gcc-4.9.2.exe?r=http%3A%2F%2Ftdm-gcc.tdragon.net%2Fdownload&ts=1420336642&use_mirror=hivelocity",
+	"tdm-gcc-4.9.2.exe": "http://downloads.sourceforge.net/project/tdm-gcc/TDM-GCC%20Installer/Previous/1.1309.0/tdm-gcc-4.9.2.exe?r=http%3A%2F%2Ftdm-gcc.tdragon.net%2Fdownload&ts=1420336642&use_mirror=hivelocity",
 
 	"Wix35.msi":          "http://storage.googleapis.com/winstrap/Wix35.msi",
 	"Install Git.exe":    "https://github.com/msysgit/msysgit/releases/download/Git-1.9.5-preview20141217/Git-1.9.5-preview20141217.exe",
