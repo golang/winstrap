@@ -53,7 +53,7 @@ func main() {
 	}
 	flag.Parse()
 	if !*flagYes {
-		log.Printf("This program will first download TDM-GCC, Wix, and Git, then let you optinally install Go.\nType 'go<enter>' to proceed.")
+		log.Printf("This program will first download TDM-GCC, Wix, and Git, then let you optionally install Go.\nType 'go<enter>' to proceed.")
 		waitForGo()
 	}
 
